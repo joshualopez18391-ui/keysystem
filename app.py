@@ -3,31 +3,44 @@ import random, string, time
 
 app = Flask(__name__)
 
+# Base de datos temporal
 keys_db = {}
 
+# Generar key
 def generate_key():
-    chars = string.ascii_uppercase + string.digits
-    return "XIT-" + "-".join(''.join(random.choice(chars) for _ in range(4)) for _ in range(3))
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
 
+# Página principal
 @app.route("/")
 def home():
-    return "Key System Online"
+    return "KEY SYSTEM ONLINE"
 
-@app.route("/getkey")
+# Obtener key
+@app.route("/get_key")
 def get_key():
-    key = generate_key()
-    expire = time.time() + 86400
-    keys_db[key] = expire
-    return f"YOUR KEY: {key}"
+    ip = request.remote_addr
 
+    new_key = generate_key()
+    expire = time.time() + 86400  # 24 horas
+
+    keys_db[new_key] = expire
+
+    return jsonify({
+        "key": new_key,
+        "expires_in_hours": 24
+    })
+
+# Verificar key
 @app.route("/verify")
 def verify():
     key = request.args.get("key")
+
     if key in keys_db:
         if time.time() < keys_db[key]:
             return jsonify({"status":"valid"})
         else:
             return jsonify({"status":"expired"})
-    return jsonify({"status":"invalid"})
+    else:
+        return jsonify({"status":"invalid"})
 
-app.run(host="0.0.0.0", port=10000)
+app.run(host="0.0.0.0", port=3000)
