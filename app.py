@@ -1,12 +1,12 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request
 import random, string, time
 
 app = Flask(__name__)
 
-# Base de datos temporal
+# Base temporal
 keys_db = {}
 
-# Generar key
+# Generar key aleatoria
 def generate_key():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
 
@@ -15,32 +15,38 @@ def generate_key():
 def home():
     return "KEY SYSTEM ONLINE"
 
-# Obtener key
-@app.route("/get_key")
-def get_key():
-    ip = request.remote_addr
+# ESTA ES LA IMPORTANTE (cuando vuelven de linkvertise)
+@app.route("/getkey")
+def getkey():
 
-    new_key = generate_key()
-    expire = time.time() + 86400  # 24 horas
+    # Linkvertise siempre manda parámetros en la URL
+    if "r" not in request.args:
+        return "Access Denied (No Linkvertise)"
 
-    keys_db[new_key] = expire
+    # crear key
+    key = generate_key()
 
-    return jsonify({
-        "key": new_key,
-        "expires_in_hours": 24
-    })
+    # guardar por 24 horas
+    keys_db[key] = time.time() + 86400
 
-# Verificar key
+    return f"""
+    <h2>TU KEY ES:</h2>
+    <h1>{key}</h1>
+    <p>Duración: 24 horas</p>
+    """
+
+# Verificar key (Roblox usa esto)
 @app.route("/verify")
 def verify():
-    key = request.args.get("key")
+    user_key = request.args.get("key")
 
-    if key in keys_db:
-        if time.time() < keys_db[key]:
-            return jsonify({"status":"valid"})
+    if user_key in keys_db:
+        if time.time() < keys_db[user_key]:
+            return "VALID"
         else:
-            return jsonify({"status":"expired"})
-    else:
-        return jsonify({"status":"invalid"})
+            del keys_db[user_key]
+            return "EXPIRED"
 
-app.run(host="0.0.0.0", port=3000)
+    return "INVALID"
+
+app.run(host="0.0.0.0", port=5000)
